@@ -72,7 +72,7 @@ class Ui_Login(object):
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
-        MainWindow.setWindowTitle(_translate("MainWindow", "MainWindow"))
+        MainWindow.setWindowTitle(_translate("MainWindow", "Вход в систему"))
         self.label.setText(_translate("MainWindow", "WTCS"))
         self.lineEdit.setPlaceholderText(_translate("MainWindow", "Логин"))
         self.lineEdit_2.setPlaceholderText(_translate("MainWindow", "Пароль"))

@@ -406,7 +406,7 @@ class Ui_MW(object):
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
-        MainWindow.setWindowTitle(_translate("MainWindow", "MainWindow"))
+        MainWindow.setWindowTitle(_translate("MainWindow", "WTCS"))
         self.label.setText(_translate("MainWindow", "Warehouse Technique Control Software"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab), _translate("MainWindow", "Камеры"))
         item = self.tableWidget.verticalHeaderItem(0)
