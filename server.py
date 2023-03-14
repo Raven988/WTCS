@@ -27,6 +27,7 @@ class Server:
                 self.all_client.append(client)
                 threading.Thread(target=self.message_handler, args=(client, address)).start()
                 client.send('Успешное подключение к чату!'.encode('utf-8'))
+                threading.Thread(target=self.video_handler, args=(client,)).start()
 
     def message_handler(self, client_socket, address):
         while True:
@@ -41,6 +42,16 @@ class Server:
                 client_socket.close()
                 for any_client in self.all_client:
                     any_client.send(f'{address[0]} покинул чат!'.encode('utf-8'))
+                break
+
+    def video_handler(self, client_socket):
+        while True:
+            try:
+                video_signal = client_socket.recv(1024)
+                for client in self.all_client:
+                    if client != client_socket:
+                        client.send(video_signal)
+            except:
                 break
 
 

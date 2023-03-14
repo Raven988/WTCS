@@ -136,7 +136,7 @@ class Ui_MW(object):
         self.pushButton_11.setObjectName("pushButton_11")
         self.horizontalLayout_6.addWidget(self.pushButton_11)
         self.verticalLayout_4.addLayout(self.horizontalLayout_6)
-        self.graphicsView = QtWidgets.QGraphicsView(self.tab)
+        self.graphicsView = QtWidgets.QLabel(self.tab)
         self.graphicsView.setStyleSheet("background-color: rgb(195, 195, 195);")
         self.graphicsView.setObjectName("graphicsView")
         self.verticalLayout_4.addWidget(self.graphicsView)
