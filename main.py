@@ -7,8 +7,9 @@ from login_win import Ui_Login
 from main_win import Ui_MW
 
 login_pwd = ("111", "222")
-HOST = '127.0.0.1'
+HOST = '192.168.0.14'
 PORT = 9000
+
 
 class message_monitor(QtCore.QThread):
     mysignal = QtCore.pyqtSignal(str)
@@ -41,40 +42,37 @@ class login_win(Ui_Login):
         sys.exit(app.exec_())
 
     def push_btn(self):
-        try:
-            self.tcp_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.tcp_client.connect((HOST, PORT))
+        self.tcp_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.tcp_client.connect((HOST, PORT))
 
-            self.message_monitor = message_monitor(self.tcp_client)
-            self.message_monitor.mysignal.connect(self.update_chat)
-            self.message_monitor.start()
+        self.message_monitor = message_monitor(self.tcp_client)
+        self.message_monitor.mysignal.connect(self.update_chat)
+        self.message_monitor.start()
 
-            if self.ui.lineEdit.text() and self.ui.lineEdit_2.text() in login_pwd:
-                self.login_win.close()
-                self.main_win.show()
-                self.anim = QtCore.QPropertyAnimation(self.main_win, b"pos")
-                self.anim.setEasingCurve(QtCore.QEasingCurve.InOutCubic)
-                self.anim.setStartValue(QtCore.QPoint(0, 0))
-                self.anim.setEndValue(QtCore.QPoint(300, 100))
-                self.anim.setDuration(1000)
-                self.anim.start()
+        if self.ui.lineEdit.text() and self.ui.lineEdit_2.text() in login_pwd:
+            self.login_win.close()
+            self.main_win.show()
+            self.anim = QtCore.QPropertyAnimation(self.main_win, b"pos")
+            self.anim.setEasingCurve(QtCore.QEasingCurve.InOutCubic)
+            self.anim.setStartValue(QtCore.QPoint(0, 0))
+            self.anim.setEndValue(QtCore.QPoint(300, 100))
+            self.anim.setDuration(1000)
+            self.anim.start()
 
-            else:
-                dlg = QtWidgets.QDialog()
-                dlg.setWindowTitle("Ошибка входа")
-                dlg.setFixedSize(180, 70)
-                dlg.setWindowFlags(QtCore.Qt.WindowCloseButtonHint)
-                label = QtWidgets.QLabel("Неверный логин или пароль")
-                layout = QtWidgets.QVBoxLayout()
-                btn = QtWidgets.QPushButton("Ok", dlg)
-                btn.clicked.connect(dlg.close)
-                layout.addWidget(label)
-                layout.addWidget(btn)
-                dlg.setLayout(layout)
-                dlg.exec_()
+        else:
+            dlg = QtWidgets.QDialog()
+            dlg.setWindowTitle("Ошибка входа")
+            dlg.setFixedSize(180, 70)
+            dlg.setWindowFlags(QtCore.Qt.WindowCloseButtonHint)
+            label = QtWidgets.QLabel("Неверный логин или пароль")
+            layout = QtWidgets.QVBoxLayout()
+            btn = QtWidgets.QPushButton("Ok", dlg)
+            btn.clicked.connect(dlg.close)
+            layout.addWidget(label)
+            layout.addWidget(btn)
+            dlg.setLayout(layout)
+            dlg.exec_()
 
-        except:
-            pass
 
 
     def update_chat(self, value):
@@ -84,12 +82,11 @@ class login_win(Ui_Login):
         message = self.start_w.textEdit.toPlainText()
         if len(message) > 0:
             self.start_w.textEdit.clear()
-            named_tuple = time.localtime()
-            time_string = time.strftime("%H:%M:%S", named_tuple)
-            self.start_w.textBrowser.append(time_string + '\n' + message + '\n')
-            message_bytes = message.encode('utf-8')
-            self.tcp_client.send(message_bytes)
-
+            time_tuple = time.localtime()
+            time_string = time.strftime("%H:%M:%S", time_tuple)
+            send_msg = time_string + '\n' + message + '\n'
+            self.start_w.textBrowser.append(send_msg)
+            self.tcp_client.send(send_msg.encode('utf-8'))
 
 
 if __name__ == "__main__":

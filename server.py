@@ -1,7 +1,7 @@
 import socket
 import threading
 
-HOST = '127.0.0.1'
+HOST = '192.168.0.14'
 PORT = 9000
 
 
@@ -20,7 +20,10 @@ class Server:
     def connect_handler(self):
         while True:
             client, address = self.server.accept()
+            print(self.all_client)
             print(f'{address[0]} подключился к серверу!')
+            for new_client in self.all_client:
+                new_client.send(f'{address[0]} подключился к серверу!'.encode('utf-8'))
             if client not in self.all_client:
                 self.all_client.append(client)
                 threading.Thread(target=self.message_handler, args=(client,)).start()
