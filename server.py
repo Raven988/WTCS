@@ -20,21 +20,28 @@ class Server:
     def connect_handler(self):
         while True:
             client, address = self.server.accept()
-            print(self.all_client)
             print(f'{address[0]} подключился к серверу!')
-            for new_client in self.all_client:
-                new_client.send(f'{address[0]} подключился к серверу!'.encode('utf-8'))
+            for any_client in self.all_client:
+                any_client.send(f'{address[0]} вошел в чат!'.encode('utf-8'))
             if client not in self.all_client:
                 self.all_client.append(client)
-                threading.Thread(target=self.message_handler, args=(client,)).start()
+                threading.Thread(target=self.message_handler, args=(client, address)).start()
                 client.send('Успешное подключение к чату!'.encode('utf-8'))
 
-    def message_handler(self, client_socket):
+    def message_handler(self, client_socket, address):
         while True:
-            message = client_socket.recv(1024)
-            for client in self.all_client:
-                if client != client_socket:
-                    client.send(message)
+            try:
+                message = client_socket.recv(1024)
+                for client in self.all_client:
+                    if client != client_socket:
+                        client.send(message)
+            except:
+                print(f'{address[0]} отключился о сервера!')
+                self.all_client.remove(client_socket)
+                client_socket.close()
+                for any_client in self.all_client:
+                    any_client.send(f'{address[0]} покинул чат!'.encode('utf-8'))
+                break
 
 
 Server()
