@@ -2,13 +2,16 @@ import socket
 import sys
 import time
 import cv2
+import imutils
+import pickle
+import struct
 from PyQt5 import QtWidgets, QtCore, QtGui
 
 from login_win import Ui_Login
 from main_win import Ui_MW
 
 login_pwd = ("111", "222")
-HOST = '192.168.0.14'
+HOST = '192.168.0.10'
 PORT = 9000
 
 
@@ -32,21 +35,32 @@ class VideoMonitor(QtCore.QThread):
     def __init__(self, server_socket, parent=None):
         QtCore.QThread.__init__(self, parent)
         self.server_socket = server_socket
-        self.video_signal = None
         self.capture = cv2.VideoCapture(0)
 
     def run(self):
-        while True:
-
-            ret, frame = self.capture.read()
-            if ret:
-                # self.video_signal = self.server_socket.recv(1024)
-                image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                flipped_image = cv2.flip(image, 1)
-                convert_to_qt_format = QtGui.QImage(flipped_image.data, flipped_image.shape[1],
-                                            flipped_image.shape[0], QtGui.QImage.Format_RGB888)
-                pic = convert_to_qt_format.scaled(640, 480, QtCore.Qt.KeepAspectRatio)
-                self.mysignal.emit(pic)
+        while (self.capture.isOpened()):
+            try:
+                img, frame = self.capture.read()
+                frame = imutils.resize(frame, width=380)
+                a = pickle.dumps(frame)
+                message = struct.pack("Q", len(a)) + a
+                self.server_socket.sendall(message)
+                cv2.imshow(f"TO:", frame)
+                key = cv2.waitKey(1) & 0xFF
+                if key == ord("q"):
+                    self.server_socket.close()
+            except:
+                print('VIDEO FINISHED!')
+                break
+        # while True:
+        #     ret, frame = self.capture.read()
+        #     if ret:
+        #         image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        #         flipped_image = cv2.flip(image, 1)
+        #         convert_to_qt_format = QtGui.QImage(flipped_image.data, flipped_image.shape[1],
+        #                                     flipped_image.shape[0], QtGui.QImage.Format_RGB888)
+        #         pic = convert_to_qt_format.scaled(640, 480, QtCore.Qt.KeepAspectRatio)
+        #         self.mysignal.emit(pic)
 
 
 # хэшлиб
@@ -62,20 +76,24 @@ class LoginWin(Ui_Login):
         self.start_w = Ui_MW()
         self.start_w.setupUi(self.main_win)
         self.start_w.pushButton.clicked.connect(self.input_msg)
+
+        sys.exit(app.exec_())
+
+    def push_btn(self):
         self.tcp_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.tcp_client.connect((HOST, PORT))
+
+        self.vid_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.vid_client.connect((HOST, 9999))
 
         self.message_monitor = MessageMonitor(self.tcp_client)
         self.message_monitor.mysignal.connect(self.update_chat)
         self.message_monitor.start()
 
-        self.video_monitor = VideoMonitor(self.tcp_client)
+        self.video_monitor = VideoMonitor(self.vid_client)
         self.video_monitor.mysignal.connect(self.image_update_slot)
         self.video_monitor.start()
 
-        sys.exit(app.exec_())
-
-    def push_btn(self):
         if self.ui.lineEdit.text() and self.ui.lineEdit_2.text() in login_pwd:
             self.login_win.close()
             self.main_win.show()
