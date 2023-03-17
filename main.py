@@ -10,7 +10,7 @@ from login_win import Ui_Login
 from main_win import Ui_MW
 
 login_pwd = ("111", "222")
-HOST = '192.168.0.12'
+HOST = '192.168.0.13'
 PORT = 9000
 
 

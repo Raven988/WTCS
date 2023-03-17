@@ -1,7 +1,7 @@
 import socket
 import threading
 
-HOST = '192.168.0.12'
+HOST = '192.168.0.13'
 PORT = 9000
 VIDEO_PORT = 9001
 
@@ -34,7 +34,7 @@ class Server:
                 self.all_client.append(client)
                 client.send('Успешное подключение к чату!\n'.encode('utf-8'))
                 threading.Thread(target=self.message_handler, args=(client, address)).start()
-                threading.Thread(target=self.video_handler, args=(video_client)).start()
+                threading.Thread(target=self.video_handler, args=(video_client,)).start()
 
     def message_handler(self, client_socket, address):
         while True:
