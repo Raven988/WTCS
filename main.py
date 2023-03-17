@@ -2,7 +2,6 @@ import socket
 import sys
 import time
 import cv2
-import imutils
 import pickle
 import struct
 from PyQt5 import QtWidgets, QtCore, QtGui
@@ -11,7 +10,7 @@ from login_win import Ui_Login
 from main_win import Ui_MW
 
 login_pwd = ("111", "222")
-HOST = '192.168.0.10'
+HOST = '192.168.0.12'
 PORT = 9000
 
 
@@ -28,42 +27,59 @@ class MessageMonitor(QtCore.QThread):
             self.message = self.server_socket.recv(1024)
             self.mysignal.emit(self.message.decode('utf-8'))
 
-
-class VideoMonitor(QtCore.QThread):
+class data_ac(QtCore.QThread):
     mysignal = QtCore.pyqtSignal(QtGui.QImage)
-
     def __init__(self, server_socket, parent=None):
         QtCore.QThread.__init__(self, parent)
         self.server_socket = server_socket
-        self.capture = cv2.VideoCapture(0)
 
     def run(self):
-        while (self.capture.isOpened()):
+        while True:
             try:
-                img, frame = self.capture.read()
-                frame = imutils.resize(frame, width=380)
-                a = pickle.dumps(frame)
-                message = struct.pack("Q", len(a)) + a
-                self.server_socket.sendall(message)
-                cv2.imshow(f"TO:", frame)
-                key = cv2.waitKey(1) & 0xFF
-                if key == ord("q"):
-                    self.server_socket.close()
+                data = b''
+                payload_size = struct.calcsize("Q")
+                while True:
+                    while len(data) < payload_size:
+                        packet = self.server_socket.recv(1024 * 4)
+                        if not packet:
+                            break
+                        data += packet
+                    packed_msg_size = data[:payload_size]
+                    data = data[payload_size:]
+                    msg_size = struct.unpack("Q", packed_msg_size)[0]
+                    while len(data) < msg_size:
+                        data += self.server_socket.recv(1024 * 4)
+                    frame_data = data[:msg_size]
+                    data = data[msg_size:]
+                    frame = pickle.loads(frame_data)
+                    image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    flipped_image = cv2.flip(image, 1)
+                    convert_to_qt_format = QtGui.QImage(flipped_image.data, flipped_image.shape[1],
+                                                flipped_image.shape[0], QtGui.QImage.Format_RGB888)
+                    pic = convert_to_qt_format.scaled(640, 480, QtCore.Qt.KeepAspectRatio)
+                    self.mysignal.emit(pic)
             except:
-                print('VIDEO FINISHED!')
-                break
-        # while True:
-        #     ret, frame = self.capture.read()
-        #     if ret:
-        #         image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        #         flipped_image = cv2.flip(image, 1)
-        #         convert_to_qt_format = QtGui.QImage(flipped_image.data, flipped_image.shape[1],
-        #                                     flipped_image.shape[0], QtGui.QImage.Format_RGB888)
-        #         pic = convert_to_qt_format.scaled(640, 480, QtCore.Qt.KeepAspectRatio)
-        #         self.mysignal.emit(pic)
+                self.server_socket.close()
+
+class VideoMonitor(QtCore.QThread):
+    def __init__(self, server_socket, parent=None):
+        QtCore.QThread.__init__(self, parent)
+        self.server_socket = server_socket
+        self.vid = cv2.VideoCapture(0)
+
+    def run(self):
+        while True:
+            try:
+                while True:
+                    ret, frame = self.vid.read()
+                    a = pickle.dumps(frame)
+                    msg = struct.pack("Q", len(a)) + a
+                    self.server_socket.sendall(msg)
+            except:
+                self.server_socket.close()
+                self.vid.release()
 
 
-# хэшлиб
 class LoginWin(Ui_Login):
     def __init__(self):
         app = QtWidgets.QApplication(sys.argv)
@@ -84,15 +100,18 @@ class LoginWin(Ui_Login):
         self.tcp_client.connect((HOST, PORT))
 
         self.vid_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.vid_client.connect((HOST, 9999))
+        self.vid_client.connect((HOST, 9001))
 
         self.message_monitor = MessageMonitor(self.tcp_client)
         self.message_monitor.mysignal.connect(self.update_chat)
         self.message_monitor.start()
 
         self.video_monitor = VideoMonitor(self.vid_client)
-        self.video_monitor.mysignal.connect(self.image_update_slot)
         self.video_monitor.start()
+
+        self.data_ac = data_ac(self.vid_client)
+        self.data_ac.mysignal.connect(self.image_update_slot)
+        self.data_ac.start()
 
         if self.ui.lineEdit.text() and self.ui.lineEdit_2.text() in login_pwd:
             self.login_win.close()
