@@ -3,6 +3,7 @@ import socket
 import sys
 import time
 import cv2
+import os
 import numpy as np
 
 from login_win import Ui_Login
@@ -13,7 +14,7 @@ from add_tec_win import Ui_Form as add_tec_win
 from add_work_part_win import Ui_Dialog as add_work_part_win
 
 LOGIN_PSWRD = {'1': '111', '2': '222', '3': '333'}
-# SERVER_IP = '192.168.194.125'
+NUM_AVALIBOL_CAMERAS = 1
 MAIN_IP = socket.gethostname()
 PORT = 9000
 VIDEO_PORT = 9001
@@ -69,13 +70,14 @@ class VideoMonitor(QtCore.QThread):
     так-же для отправки видеопотока на сервер для последующего перенапровления клиентам"""
     mysignal = QtCore.pyqtSignal(QtGui.QImage)
 
-    def __init__(self, parent=None):
+    def __init__(self, cam_index, parent=None):
         """Инициализация"""
         QtCore.QThread.__init__(self, parent)
         self.vid_client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.vid = cv2.VideoCapture(0)
+        self.vid = cv2.VideoCapture(cam_index)
 
     def run(self):
+        """Запуск потока"""
         while True:
             try:
                 ret, frame = self.vid.read()
@@ -94,7 +96,7 @@ class VideoMonitor(QtCore.QThread):
                     self.vid_client.sendto(string_data, (SERVER_IP, VIDEO_PORT))
 
             except:
-                print('Ошибка с оброботки сигнала с веб-камеры')
+                print('Ошибка оброботки сигнала с веб-камеры')
                 self.vid_client.close()
                 self.vid.release()
 
@@ -116,13 +118,46 @@ class LoginWin(Ui_Login):
         self.start_w.pushButton_4.clicked.connect(self.add_tec_win)
         self.start_w.pushButton_9.clicked.connect(self.add_pers_win)
         self.start_w.pushButton_6.clicked.connect(self.add_rep_win)
+        self.start_w.frame_8.hide()
+        self.num_available_cameras = NUM_AVALIBOL_CAMERAS
         self.tcp_client = None
         self.anim = None
         self.message_monitor = None
         self.video_monitor = None
         self.video_handler = None
+        self.start_w.camera_box_2.activated.connect(self.activated_video_combobox)
+        self.start_w.print_screen_btn.clicked.connect(self.print_scr)
 
         sys.exit(app.exec_())
+
+    def print_scr(self):
+        """Функция для сохранения скриншота с камеры"""
+        pixmap = QtGui.QPixmap(self.start_w.camera_label.size())
+        self.start_w.camera_label.render(pixmap)
+        time_tuple = time.localtime()
+        time_string = time.strftime("%H.%M.%S.%d.%m.%Y,", time_tuple)
+        filename = f'screenshot_{time_string}.png'
+        folder_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'screenshots')
+        if not os.path.exists(folder_path):
+            os.makedirs(folder_path)
+        filepath = os.path.join(folder_path, filename)
+        pixmap.save(filepath)
+
+    def activated_video_combobox(self, index):
+        """Функци для отображения картинки с веб-камеры"""
+        if self.num_available_cameras == 1:
+            self.video_monitor = VideoMonitor(0)
+            self.video_monitor.mysignal.connect(self.image_update_slot)
+            self.video_monitor.start()
+            self.start_w.camera_box_2.setEnabled(False)
+        else:
+            if self.video_monitor is None:
+                self.video_monitor = VideoMonitor(index)
+                self.video_monitor.mysignal.connect(self.image_update_slot)
+                self.video_monitor.start()
+            else:
+                self.video_monitor.vid.release()
+                self.video_monitor.vid = cv2.VideoCapture(index)
 
     def push_btn(self):
         """Функция для отрисобки главного окна.
@@ -147,14 +182,6 @@ class LoginWin(Ui_Login):
                 self.message_monitor = MessageMonitor(self.tcp_client)
                 self.message_monitor.mysignal.connect(self.update_chat)
                 self.message_monitor.start()
-
-                self.video_monitor = VideoMonitor()
-                self.video_monitor.mysignal.connect(self.image_update_slot)
-                self.video_monitor.start()
-
-                self.video_handler = VideoHandler()
-                self.video_handler.mysignal.connect(self.image_update_slot2)
-                self.video_handler.start()
 
             else:
                 dlg = QtWidgets.QDialog()
@@ -190,14 +217,14 @@ class LoginWin(Ui_Login):
 
     def image_update_slot(self, image):
         """Функция для обновления видео с веб-камер"""
-        self.start_w.camera_label2.setPixmap(QtGui.QPixmap.fromImage(image))
+        self.start_w.camera_label.setPixmap(QtGui.QPixmap.fromImage(image))
 
     def image_update_slot2(self, image):
-        """Функция для обновления видео с веб-камер других клиентов"""
+        """Функция для обновления видео с веб-камер 2"""
         self.start_w.camera_label.setPixmap(QtGui.QPixmap.fromImage(image))
 
     def input_msg(self):
-        """Функция для обновления чата и отправки данных другим клиентам"""
+        """Функция обновления чата и отправки данных другим клиентам"""
         message = self.start_w.textEdit.toPlainText()
         if len(message) > 0:
             self.start_w.textEdit.clear()
@@ -208,25 +235,37 @@ class LoginWin(Ui_Login):
             self.tcp_client.send(send_msg.encode('utf-8'))
 
     def add_tec_win(self):
+        """Функция отображения окна добовления техникик"""
         self.added_win = QtWidgets.QWidget()
         self.ui = add_tec_win()
         self.ui.setupUi(self.added_win)
         self.added_win.show()
 
     def add_rep_win(self):
+        """Функция отображения окна добавления ремонтов"""
         self.added_win = QtWidgets.QWidget()
         self.ui = add_repair_win()
         self.ui.setupUi(self.added_win)
         self.added_win.show()
         self.ui.pushButton_5.clicked.connect(self.add_work_win)
+        self.ui.pushButton_3.clicked.connect(self.add_parts_win)
 
     def add_pers_win(self):
+        """Функция отображения окна добавления пользователей"""
         self.added_win = QtWidgets.QWidget()
         self.ui = add_pers_win()
         self.ui.setupUi(self.added_win)
         self.added_win.show()
 
     def add_work_win(self):
+        """Функция отображения окна добавления работ"""
+        self.added_win = QtWidgets.QDialog()
+        self.ui = add_work_part_win()
+        self.ui.setupUi(self.added_win)
+        self.added_win.show()
+
+    def add_parts_win(self):
+        """Функция отоброжения окна добавления запчастей"""
         self.added_win = QtWidgets.QDialog()
         self.ui = add_work_part_win()
         self.ui.setupUi(self.added_win)
