@@ -259,12 +259,128 @@ class LoginWin(Ui_Login):
         self.message_monitor = None
         self.video_monitor = None
         self.video_handler = None
-
         self.start_w.camera_box_2.activated.connect(self.activated_video_combobox)
         self.start_w.print_screen_btn.clicked.connect(self.print_scr)
         self.start_w.pushButton_12.clicked.connect(self.clear_chat)
+        self.start_w.pushButton_2.clicked.connect(self.add_row)
 
         sys.exit(app.exec_())
+
+    def push_btn(self):
+        """Функция для отрисобки главного окна.
+        Создание потоков реализована в данной функие"""
+        try:
+            if self.ui.lineEdit.text() in LOGIN_PSWRD and \
+                    LOGIN_PSWRD[self.ui.lineEdit.text()] == self.ui.lineEdit_2.text():
+                self.tcp_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                self.tcp_client.connect((SERVER_IP, PORT))
+
+            if self.ui.lineEdit.text() in LOGIN_PSWRD and \
+                    LOGIN_PSWRD[self.ui.lineEdit.text()] == self.ui.lineEdit_2.text():
+                self.login_win.close()
+                self.main_win.show()
+                self.anim = QtCore.QPropertyAnimation(self.main_win, b"pos")
+                self.anim.setEasingCurve(QtCore.QEasingCurve.InOutCubic)
+                self.anim.setStartValue(QtCore.QPoint(0, 0))
+                self.anim.setEndValue(QtCore.QPoint(300, 100))
+                self.anim.setDuration(1000)
+                self.anim.start()
+                self.message_monitor = MessageMonitor(self.tcp_client)
+                self.message_monitor.mysignal.connect(self.update_chat)
+                self.message_monitor.start()
+                try:
+                    with CONNECTION.cursor() as cursor:
+                        cursor.execute(f"SELECT * FROM warehouse;")
+                        data = cursor.fetchall()
+                        for item in data:
+                            self.start_w.camera_box.addItem(item[1])
+                            self.start_w.comboBox_3.addItem(item[1])
+                        self.start_w.treeWidget.setHeaderLabels(
+                            ['Склад', 'Гаражный номер', 'Регистрационный знак', 'Комментарии'])
+                        prt1 = QtWidgets.QTreeWidgetItem(self.start_w.treeWidget, [data[0][1], '', '', ''])
+                        prt2 = QtWidgets.QTreeWidgetItem(self.start_w.treeWidget, [data[1][1], '', '', ''])
+                        prt3 = QtWidgets.QTreeWidgetItem(self.start_w.treeWidget, [data[2][1], '', '', ''])
+                        prt4 = QtWidgets.QTreeWidgetItem(self.start_w.treeWidget, [data[3][1], '', '', ''])
+                        prt5 = QtWidgets.QTreeWidgetItem(self.start_w.treeWidget, [data[4][1], '', '', ''])
+                        cursor.execute("SELECT * FROM technique JOIN warehouse ON technique.warehouse_id = warehouse.id;")
+                        data2 = cursor.fetchall()
+                        for i in data2:
+                            if i[10] == "РЦ Санкт-Петербург":
+                                child = QtWidgets.QTreeWidgetItem(prt1,[str(i[3]), str(i[1]), str(i[2]), str(i[7])])
+                        for i in data2:
+                            if i[10] == "РЦ Челябинск":
+                                child = QtWidgets.QTreeWidgetItem(prt2,[str(i[3]), str(i[1]), str(i[2]), str(i[7])])
+                        for i in data2:
+                            if i[10] == "РЦ Калининград":
+                                child = QtWidgets.QTreeWidgetItem(prt3,[str(i[3]), str(i[1]), str(i[2]), str(i[7])])
+                        for i in data2:
+                            if i[10] == "РЦ Подольск":
+                                child = QtWidgets.QTreeWidgetItem(prt4,[str(i[3]), str(i[1]), str(i[2]), str(i[7])])
+                        for i in data2:
+                            if i[10] == "РЦ Казань":
+                                child = QtWidgets.QTreeWidgetItem(prt5,[str(i[3]), str(i[1]), str(i[2]), str(i[7])])
+
+                        self.start_w.treeWidget_2.setHeaderLabels(
+                            ['Склад', 'ФИО', 'Должность', 'Номер телефона'])
+                        prt6 = QtWidgets.QTreeWidgetItem(self.start_w.treeWidget_2, [data[0][1], '', '', ''])
+                        prt7 = QtWidgets.QTreeWidgetItem(self.start_w.treeWidget_2, [data[1][1], '', '', ''])
+                        prt8 = QtWidgets.QTreeWidgetItem(self.start_w.treeWidget_2, [data[2][1], '', '', ''])
+                        prt9 = QtWidgets.QTreeWidgetItem(self.start_w.treeWidget_2, [data[3][1], '', '', ''])
+                        prt10 = QtWidgets.QTreeWidgetItem(self.start_w.treeWidget_2, [data[4][1], '', '', ''])
+                        cursor.execute(
+                            "SELECT * FROM users JOIN warehouse ON users.warehouse_id = warehouse.id JOIN position ON position.id = users.position_id;")
+                        data3 = cursor.fetchall()
+                        for i in data3:
+                            if i[15] == "РЦ Санкт-Петербург":
+                                child = QtWidgets.QTreeWidgetItem(prt6, [str(''), str(i[1])+' '+str(i[2])+' '+str(i[3]), str(i[17]), str(i[5])])
+                        for i in data3:
+                            if i[15] == "РЦ Челябинск":
+                                child = QtWidgets.QTreeWidgetItem(prt7, [str(''), str(i[1])+' '+str(i[2])+' '+str(i[3]), str(i[17]), str(i[5])])
+                        for i in data3:
+                            if i[15] == "РЦ Калининград":
+                                child = QtWidgets.QTreeWidgetItem(prt8, [str(''), str(i[1])+' '+str(i[2])+' '+str(i[3]), str(i[17]), str(i[5])])
+                        for i in data3:
+                            if i[15] == "РЦ Подольск":
+                                child = QtWidgets.QTreeWidgetItem(prt9, [str(''), str(i[1])+' '+str(i[2])+' '+str(i[3]), str(i[17]), str(i[5])])
+                        for i in data3:
+                            if i[15] == "РЦ Казань":
+                                child = QtWidgets.QTreeWidgetItem(prt10, [str(''), str(i[1])+' '+str(i[2])+' '+str(i[3]), str(i[17]), str(i[5])])
+
+                except Exception as ex:
+                    print(ex)
+
+            else:
+                dlg = QtWidgets.QDialog()
+                dlg.setWindowTitle("Ошибка входа")
+                dlg.setFixedSize(180, 70)
+                dlg.setWindowFlags(QtCore.Qt.WindowCloseButtonHint)
+                label = QtWidgets.QLabel("Неверный логин или пароль")
+                layout = QtWidgets.QVBoxLayout()
+                btn = QtWidgets.QPushButton("Ok", dlg)
+                btn.clicked.connect(dlg.close)
+                layout.addWidget(label)
+                layout.addWidget(btn)
+                dlg.setLayout(layout)
+                dlg.exec_()
+
+        except (ConnectionRefusedError, TimeoutError):
+            dlg = QtWidgets.QDialog()
+            dlg.setWindowTitle("Ошибка входа")
+            dlg.setFixedSize(180, 70)
+            dlg.setWindowFlags(QtCore.Qt.WindowCloseButtonHint)
+            label = QtWidgets.QLabel("Сервер недоступен")
+            layout = QtWidgets.QVBoxLayout()
+            btn = QtWidgets.QPushButton("Ok", dlg)
+            btn.clicked.connect(dlg.close)
+            layout.addWidget(label)
+            layout.addWidget(btn)
+            dlg.setLayout(layout)
+            dlg.exec_()
+
+    def add_row(self):
+        """Добавление строки во вкладке задачи"""
+        row_position = self.start_w.tableWidget.rowCount()
+        self.start_w.tableWidget.insertRow(row_position)
 
     def del_tech(self):
         """Удаление записи с базы данных"""
@@ -336,93 +452,6 @@ class LoginWin(Ui_Login):
             else:
                 self.video_monitor.vid.release()
                 self.video_monitor.vid = cv2.VideoCapture(index)
-
-    def push_btn(self):
-        """Функция для отрисобки главного окна.
-        Создание потоков реализована в данной функие"""
-        try:
-            if self.ui.lineEdit.text() in LOGIN_PSWRD and \
-                    LOGIN_PSWRD[self.ui.lineEdit.text()] == self.ui.lineEdit_2.text():
-                self.tcp_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                self.tcp_client.connect((SERVER_IP, PORT))
-
-            if self.ui.lineEdit.text() in LOGIN_PSWRD and \
-                    LOGIN_PSWRD[self.ui.lineEdit.text()] == self.ui.lineEdit_2.text():
-                self.login_win.close()
-                self.main_win.show()
-                self.anim = QtCore.QPropertyAnimation(self.main_win, b"pos")
-                self.anim.setEasingCurve(QtCore.QEasingCurve.InOutCubic)
-                self.anim.setStartValue(QtCore.QPoint(0, 0))
-                self.anim.setEndValue(QtCore.QPoint(300, 100))
-                self.anim.setDuration(1000)
-                self.anim.start()
-                self.message_monitor = MessageMonitor(self.tcp_client)
-                self.message_monitor.mysignal.connect(self.update_chat)
-                self.message_monitor.start()
-                try:
-                    with CONNECTION.cursor() as cursor:
-                        cursor.execute(f"SELECT * FROM warehouse;")
-                        data = cursor.fetchall()
-                        for item in data:
-                            self.start_w.camera_box.addItem(item[1])
-                            self.start_w.comboBox.addItem(item[1])
-                            self.start_w.comboBox_3.addItem(item[1])
-                            self.start_w.comboBox_6.addItem(item[1])
-                        self.start_w.treeWidget.setHeaderLabels(
-                            ['Склад', 'Гаражный номер', 'Регистрационный знак', 'Комментарии'])
-                        prt1 = QtWidgets.QTreeWidgetItem(self.start_w.treeWidget, [data[0][1], '', '', ''])
-                        prt2 = QtWidgets.QTreeWidgetItem(self.start_w.treeWidget, [data[1][1], '', '', ''])
-                        prt3 = QtWidgets.QTreeWidgetItem(self.start_w.treeWidget, [data[2][1], '', '', ''])
-                        prt4 = QtWidgets.QTreeWidgetItem(self.start_w.treeWidget, [data[3][1], '', '', ''])
-                        prt5 = QtWidgets.QTreeWidgetItem(self.start_w.treeWidget, [data[4][1], '', '', ''])
-                        cursor.execute("SELECT * FROM technique JOIN warehouse ON technique.warehouse_id = warehouse.id;")
-                        data2 = cursor.fetchall()
-                        for i in data2:
-                            if i[10] == "РЦ Санкт-Петербург":
-                                child = QtWidgets.QTreeWidgetItem(prt1,[str(i[3]), str(i[1]), str(i[2]), str(i[7])])
-                        for i in data2:
-                            if i[10] == "РЦ Челябинск":
-                                child = QtWidgets.QTreeWidgetItem(prt2,[str(i[3]), str(i[1]), str(i[2]), str(i[7])])
-                        for i in data2:
-                            if i[10] == "РЦ Калининград":
-                                child = QtWidgets.QTreeWidgetItem(prt3,[str(i[3]), str(i[1]), str(i[2]), str(i[7])])
-                        for i in data2:
-                            if i[10] == "РЦ Подольск":
-                                child = QtWidgets.QTreeWidgetItem(prt4,[str(i[3]), str(i[1]), str(i[2]), str(i[7])])
-                        for i in data2:
-                            if i[10] == "РЦ Казань":
-                                child = QtWidgets.QTreeWidgetItem(prt5,[str(i[3]), str(i[1]), str(i[2]), str(i[7])])
-
-                except Exception as ex:
-                    print(ex)
-
-            else:
-                dlg = QtWidgets.QDialog()
-                dlg.setWindowTitle("Ошибка входа")
-                dlg.setFixedSize(180, 70)
-                dlg.setWindowFlags(QtCore.Qt.WindowCloseButtonHint)
-                label = QtWidgets.QLabel("Неверный логин или пароль")
-                layout = QtWidgets.QVBoxLayout()
-                btn = QtWidgets.QPushButton("Ok", dlg)
-                btn.clicked.connect(dlg.close)
-                layout.addWidget(label)
-                layout.addWidget(btn)
-                dlg.setLayout(layout)
-                dlg.exec_()
-
-        except (ConnectionRefusedError, TimeoutError):
-            dlg = QtWidgets.QDialog()
-            dlg.setWindowTitle("Ошибка входа")
-            dlg.setFixedSize(180, 70)
-            dlg.setWindowFlags(QtCore.Qt.WindowCloseButtonHint)
-            label = QtWidgets.QLabel("Сервер недоступен")
-            layout = QtWidgets.QVBoxLayout()
-            btn = QtWidgets.QPushButton("Ok", dlg)
-            btn.clicked.connect(dlg.close)
-            layout.addWidget(label)
-            layout.addWidget(btn)
-            dlg.setLayout(layout)
-            dlg.exec_()
 
     def update_chat(self, value):
         """Функция для обновления чата от других клиентов"""
@@ -503,13 +532,15 @@ class LoginWin(Ui_Login):
 
 
 if __name__ == "__main__":
+
     try:
+        from log_postgres import host, user, password, port, database
         CONNECTION = psycopg2.connect(
-            host='localhost',
-            user='postgres',
-            password='postgresql26516',
-            port=7070,
-            database='wtcs'
+            host=host,
+            user=user,
+            password=password,
+            port=port,
+            database=database
         )
         CONNECTION.autocommit = True
     except:
