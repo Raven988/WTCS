@@ -8,7 +8,7 @@ import psycopg2
 import numpy as np
 
 from login_win import Ui_Login
-from main_win import Ui_MW
+from main_win import Ui_MainWindow as Ui_MW
 from add_user_win import Ui_Form as add_pers_win
 from add_repair_win import Ui_Form as add_repair_win
 from add_tech_win import Ui_Form as add_tec_win
@@ -259,27 +259,12 @@ class LoginWin(Ui_Login):
         self.message_monitor = None
         self.video_monitor = None
         self.video_handler = None
-        try:
-            with CONNECTION.cursor() as cursor:
-                cursor.execute(f"SELECT * FROM warehouse;")
-                data = cursor.fetchall()
-                for item in data:
-                    self.start_w.camera_box.addItem(item[1])
-                    self.start_w.comboBox.addItem(item[1])
-                    self.start_w.comboBox_3.addItem(item[1])
-                    self.start_w.comboBox_6.addItem(item[1])
-                    self.start_w.comboBox_8.addItem(item[1])
-        except:
-            pass
+
         self.start_w.camera_box_2.activated.connect(self.activated_video_combobox)
         self.start_w.print_screen_btn.clicked.connect(self.print_scr)
         self.start_w.pushButton_12.clicked.connect(self.clear_chat)
-        self.start_w.comboBox_8.activated.connect(self.show_technique)
 
         sys.exit(app.exec_())
-
-    def show_technique(self):
-        pass
 
     def del_tech(self):
         """Удаление записи с базы данных"""
@@ -371,10 +356,45 @@ class LoginWin(Ui_Login):
                 self.anim.setEndValue(QtCore.QPoint(300, 100))
                 self.anim.setDuration(1000)
                 self.anim.start()
-
                 self.message_monitor = MessageMonitor(self.tcp_client)
                 self.message_monitor.mysignal.connect(self.update_chat)
                 self.message_monitor.start()
+                try:
+                    with CONNECTION.cursor() as cursor:
+                        cursor.execute(f"SELECT * FROM warehouse;")
+                        data = cursor.fetchall()
+                        for item in data:
+                            self.start_w.camera_box.addItem(item[1])
+                            self.start_w.comboBox.addItem(item[1])
+                            self.start_w.comboBox_3.addItem(item[1])
+                            self.start_w.comboBox_6.addItem(item[1])
+                        self.start_w.treeWidget.setHeaderLabels(
+                            ['Склад', 'Гаражный номер', 'Регистрационный знак', 'Комментарии'])
+                        prt1 = QtWidgets.QTreeWidgetItem(self.start_w.treeWidget, [data[0][1], '', '', ''])
+                        prt2 = QtWidgets.QTreeWidgetItem(self.start_w.treeWidget, [data[1][1], '', '', ''])
+                        prt3 = QtWidgets.QTreeWidgetItem(self.start_w.treeWidget, [data[2][1], '', '', ''])
+                        prt4 = QtWidgets.QTreeWidgetItem(self.start_w.treeWidget, [data[3][1], '', '', ''])
+                        prt5 = QtWidgets.QTreeWidgetItem(self.start_w.treeWidget, [data[4][1], '', '', ''])
+                        cursor.execute("SELECT * FROM technique JOIN warehouse ON technique.warehouse_id = warehouse.id;")
+                        data2 = cursor.fetchall()
+                        for i in data2:
+                            if i[10] == "РЦ Санкт-Петербург":
+                                child = QtWidgets.QTreeWidgetItem(prt1,[str(i[3]), str(i[1]), str(i[2]), str(i[7])])
+                        for i in data2:
+                            if i[10] == "РЦ Челябинск":
+                                child = QtWidgets.QTreeWidgetItem(prt2,[str(i[3]), str(i[1]), str(i[2]), str(i[7])])
+                        for i in data2:
+                            if i[10] == "РЦ Калининград":
+                                child = QtWidgets.QTreeWidgetItem(prt3,[str(i[3]), str(i[1]), str(i[2]), str(i[7])])
+                        for i in data2:
+                            if i[10] == "РЦ Подольск":
+                                child = QtWidgets.QTreeWidgetItem(prt4,[str(i[3]), str(i[1]), str(i[2]), str(i[7])])
+                        for i in data2:
+                            if i[10] == "РЦ Казань":
+                                child = QtWidgets.QTreeWidgetItem(prt5,[str(i[3]), str(i[1]), str(i[2]), str(i[7])])
+
+                except Exception as ex:
+                    print(ex)
 
             else:
                 dlg = QtWidgets.QDialog()
