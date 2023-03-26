@@ -4,14 +4,16 @@ import sys
 import time
 import cv2
 import os
+import psycopg2
 import numpy as np
 
 from login_win import Ui_Login
 from main_win import Ui_MW
-from add_pers_win import Ui_Form as add_pers_win
+from add_user_win import Ui_Form as add_pers_win
 from add_repair_win import Ui_Form as add_repair_win
-from add_tec_win import Ui_Form as add_tec_win
-from add_work_part_win import Ui_Dialog as add_work_part_win
+from add_tech_win import Ui_Form as add_tec_win
+from add_work_part_win import Ui_Form as add_work_part_win
+from del_win import Ui_Form as del_win
 
 LOGIN_PSWRD = {'1': '111', '2': '222', '3': '333'}
 NUM_AVALIBOL_CAMERAS = 1
@@ -101,6 +103,69 @@ class VideoMonitor(QtCore.QThread):
                 self.vid.release()
 
 
+def adding_technique(ui, win):
+    """Функия добавления техники в базу данных"""
+    validator = QtGui.QIntValidator()
+    ui.LineEdit_2.setValidator(validator)
+    ui.LineEdit_5.setValidator(validator)
+    model = ui.LineEdit.text()
+    serial_number = ui.LineEdit_2.text()
+    registration_plate = ui.LineEdit_4.text()
+    garage_number = ui.LineEdit_5.text()
+    date_of_entry = ui.DateEdit.text()
+    warehouse_id = ui.ComboBox.currentIndex()
+    comments = ui.LineEdit_6.text()
+    try:
+        with CONNECTION.cursor() as cursor:
+            cursor.execute(
+                f"INSERT INTO technique(garage_number, registration_plate, model, serial_number, "
+                f"date_of_entry, comments, warehouse_id) VALUES ({garage_number},"
+                f"'{registration_plate}', '{model}', {serial_number}, '{date_of_entry}',"
+                f"'{comments}', {warehouse_id + 1});"
+            )
+            win.close()
+    except:
+        dlg = QtWidgets.QDialog()
+        dlg.setWindowTitle("Ошибка")
+        dlg.setFixedSize(210, 70)
+        dlg.setWindowFlags(QtCore.Qt.WindowCloseButtonHint)
+        label = QtWidgets.QLabel("Необходимо заполнить все строки")
+        layout = QtWidgets.QVBoxLayout()
+        btn = QtWidgets.QPushButton("Ok", dlg)
+        btn.clicked.connect(dlg.close)
+        layout.addWidget(label)
+        layout.addWidget(btn)
+        dlg.setLayout(layout)
+        dlg.exec_()
+
+
+def delete_data(ui, win):
+    """Удаление записи с базы данных"""
+    selcted_data = ui.comboBox_2.currentText()
+    try:
+        with CONNECTION.cursor() as cursor:
+            cursor.execute(f"DELETE FROM technique WHERE garage_number = {selcted_data};")
+            win.close()
+    except:
+        pass
+
+
+def add_data_to_combobox(ui):
+    """Добавление данных в выподающий список"""
+    warehouse = ui.comboBox.currentText()
+    ui.comboBox_2.clear()
+    try:
+        with CONNECTION.cursor() as cursor:
+            cursor.execute(f"SELECT garage_number FROM (SELECT * FROM warehouse JOIN technique "
+                           f"ON warehouse.id = technique.warehouse_id) as w "
+                           f"WHERE name = '{warehouse}';")
+            data = cursor.fetchall()
+            for item in data:
+                ui.comboBox_2.addItem(str(item[0]))
+    except:
+        pass
+
+
 class LoginWin(Ui_Login):
     """Запуск окна входа в приложения с последующим отоброжение главного окна"""
     def __init__(self):
@@ -116,6 +181,7 @@ class LoginWin(Ui_Login):
         self.start_w.setupUi(self.main_win)
         self.start_w.pushButton.clicked.connect(self.input_msg)
         self.start_w.pushButton_4.clicked.connect(self.add_tec_win)
+        self.start_w.pushButton_5.clicked.connect(self.del_data)
         self.start_w.pushButton_9.clicked.connect(self.add_pers_win)
         self.start_w.pushButton_6.clicked.connect(self.add_rep_win)
         self.start_w.frame_8.hide()
@@ -127,8 +193,33 @@ class LoginWin(Ui_Login):
         self.video_handler = None
         self.start_w.camera_box_2.activated.connect(self.activated_video_combobox)
         self.start_w.print_screen_btn.clicked.connect(self.print_scr)
+        self.start_w.pushButton_12.clicked.connect(self.clear_chat)
 
         sys.exit(app.exec_())
+
+    def del_data(self):
+        """Удаление записи с базы данных"""
+        self.del_win = QtWidgets.QWidget()
+        self.ui = del_win()
+        self.ui.setupUi(self.del_win)
+        try:
+            with CONNECTION.cursor() as cursor:
+                cursor.execute("SELECT * FROM warehouse;")
+                data = cursor.fetchall()
+                for item in data:
+                    self.ui.comboBox.addItem(item[1])
+        except:
+            pass
+
+        self.del_win.show()
+        self.ui.comboBox.activated.connect(lambda: add_data_to_combobox(self.ui))
+        self.ui.pushButton.clicked.connect(lambda: delete_data(self.ui, self.del_win))
+        self.ui.pushButton_2.clicked.connect(self.del_win.close)
+
+    def clear_chat(self):
+        """Очистка окна сообщения"""
+        self.start_w.textEdit.clear()
+
 
     def print_scr(self):
         """Функция для сохранения скриншота с камеры"""
@@ -240,6 +331,8 @@ class LoginWin(Ui_Login):
         self.ui = add_tec_win()
         self.ui.setupUi(self.added_win)
         self.added_win.show()
+        self.ui.pushButton_2.clicked.connect(self.added_win.close)
+        self.ui.pushButton.clicked.connect(lambda: adding_technique(self.ui, self.added_win))
 
     def add_rep_win(self):
         """Функция отображения окна добавления ремонтов"""
@@ -247,6 +340,7 @@ class LoginWin(Ui_Login):
         self.ui = add_repair_win()
         self.ui.setupUi(self.added_win)
         self.added_win.show()
+        self.ui.pushButton_2.clicked.connect(self.added_win.close)
         self.ui.pushButton_5.clicked.connect(self.add_work_win)
         self.ui.pushButton_3.clicked.connect(self.add_parts_win)
 
@@ -256,6 +350,7 @@ class LoginWin(Ui_Login):
         self.ui = add_pers_win()
         self.ui.setupUi(self.added_win)
         self.added_win.show()
+        self.ui.pushButton_2.clicked.connect(self.added_win.close)
 
     def add_work_win(self):
         """Функция отображения окна добавления работ"""
@@ -273,5 +368,17 @@ class LoginWin(Ui_Login):
 
 
 if __name__ == "__main__":
-    SERVER_IP = input('Введите ип адрес сервера: ')
+    try:
+        CONNECTION = psycopg2.connect(
+            host='localhost',
+            user='postgres',
+            password='postgresql26516',
+            port=7070,
+            database='wtcs'
+        )
+        CONNECTION.autocommit = True
+    except:
+        print('Подключение к базе данных отсутсвует')
+    SERVER_IP = '192.168.194.139'
     LoginWin()
+
