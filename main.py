@@ -105,9 +105,6 @@ class VideoMonitor(QtCore.QThread):
 
 def adding_technique(ui, win):
     """Функия добавления техники в базу данных"""
-    validator = QtGui.QIntValidator()
-    ui.LineEdit_2.setValidator(validator)
-    ui.LineEdit_5.setValidator(validator)
     model = ui.LineEdit.text()
     serial_number = ui.LineEdit_2.text()
     registration_plate = ui.LineEdit_4.text()
@@ -139,8 +136,48 @@ def adding_technique(ui, win):
         dlg.exec_()
 
 
-def delete_data(ui, win):
-    """Удаление записи с базы данных"""
+def adding_users(ui, win):
+    """Функия добавления пользователя в базу данных"""
+    first_name = ui.LineEdit.text()
+    last_name = ui.LineEdit_2.text()
+    fathers_name = ui.LineEdit_3.text()
+    warehouse_id = ui.ComboBox.currentIndex()
+    position_id = ui.ComboBox_2.currentIndex()
+    address_of_registration = ui.LineEdit_7.text()
+    address_of_resdence = ui.LineEdit_8.text()
+    phone_number = ui.LineEdit_4.text()
+    comments = ui.LineEdit_6.text()
+    employment_data = ui.DateEdit.text()
+    login = ui.LineEdit_5.text()
+    password = ui.LineEdit_9.text()
+    try:
+        with CONNECTION.cursor() as cursor:
+            cursor.execute(
+                f"INSERT INTO users(first_name, last_name, fathers_name, position_id, "
+                f"phone_number, address_of_registration, address_of_resdence, employment_data,"
+                f"comments, login, password, warehouse_id) VALUES ('{first_name}',"
+                f"'{last_name}', '{fathers_name}', {position_id + 1}, {phone_number},"
+                f"'{address_of_registration}', '{address_of_resdence}', '{employment_data}', "
+                f"'{comments}', '{login}', '{password}', {warehouse_id + 1});"
+            )
+            win.close()
+    except:
+        dlg = QtWidgets.QDialog()
+        dlg.setWindowTitle("Ошибка")
+        dlg.setFixedSize(210, 70)
+        dlg.setWindowFlags(QtCore.Qt.WindowCloseButtonHint)
+        label = QtWidgets.QLabel("Необходимо заполнить все строки")
+        layout = QtWidgets.QVBoxLayout()
+        btn = QtWidgets.QPushButton("Ok", dlg)
+        btn.clicked.connect(dlg.close)
+        layout.addWidget(label)
+        layout.addWidget(btn)
+        dlg.setLayout(layout)
+        dlg.exec_()
+
+
+def delete_technique(ui, win):
+    """Удаление техники с базы данных"""
     selcted_data = ui.comboBox_2.currentText()
     try:
         with CONNECTION.cursor() as cursor:
@@ -150,8 +187,8 @@ def delete_data(ui, win):
         pass
 
 
-def add_data_to_combobox(ui):
-    """Добавление данных в выподающий список"""
+def add_garage_number_to_combobox(ui):
+    """Добавление гаражных номеров в выподающий список"""
     warehouse = ui.comboBox.currentText()
     ui.comboBox_2.clear()
     try:
@@ -162,6 +199,36 @@ def add_data_to_combobox(ui):
             data = cursor.fetchall()
             for item in data:
                 ui.comboBox_2.addItem(str(item[0]))
+    except:
+        pass
+
+
+def add_users_to_combobox(ui):
+    """Добавление пользователей в выподающий список"""
+    warehouse = ui.comboBox.currentText()
+    ui.comboBox_2.clear()
+    try:
+        with CONNECTION.cursor() as cursor:
+            cursor.execute(f"SELECT first_name, last_name, fathers_name FROM "
+                           f"(SELECT * FROM warehouse JOIN users ON "
+                           f"warehouse.id = users.warehouse_id) as w WHERE name = '{warehouse}';")
+            data = cursor.fetchall()
+            for item in data:
+                ui.comboBox_2.addItem(f"{item[0]} {item[1]} {item[2]}")
+    except:
+        pass
+
+
+def delete_user(ui, win):
+    """Удаление пользователя с базы данных"""
+    selcted_data = ui.comboBox_2.currentText()
+    split_data = selcted_data.split()
+    try:
+        with CONNECTION.cursor() as cursor:
+            cursor.execute(f"DELETE FROM users WHERE (first_name = '{split_data[0]}' "
+                           f"AND last_name = '{split_data[1]}' "
+                           f"AND fathers_name = '{split_data[2]}');")
+            win.close()
     except:
         pass
 
@@ -181,8 +248,9 @@ class LoginWin(Ui_Login):
         self.start_w.setupUi(self.main_win)
         self.start_w.pushButton.clicked.connect(self.input_msg)
         self.start_w.pushButton_4.clicked.connect(self.add_tec_win)
-        self.start_w.pushButton_5.clicked.connect(self.del_data)
+        self.start_w.pushButton_5.clicked.connect(self.del_tech)
         self.start_w.pushButton_9.clicked.connect(self.add_pers_win)
+        self.start_w.pushButton_10.clicked.connect(self.del_user)
         self.start_w.pushButton_6.clicked.connect(self.add_rep_win)
         self.start_w.frame_8.hide()
         self.num_available_cameras = NUM_AVALIBOL_CAMERAS
@@ -191,13 +259,29 @@ class LoginWin(Ui_Login):
         self.message_monitor = None
         self.video_monitor = None
         self.video_handler = None
+        try:
+            with CONNECTION.cursor() as cursor:
+                cursor.execute(f"SELECT * FROM warehouse;")
+                data = cursor.fetchall()
+                for item in data:
+                    self.start_w.camera_box.addItem(item[1])
+                    self.start_w.comboBox.addItem(item[1])
+                    self.start_w.comboBox_3.addItem(item[1])
+                    self.start_w.comboBox_6.addItem(item[1])
+                    self.start_w.comboBox_8.addItem(item[1])
+        except:
+            pass
         self.start_w.camera_box_2.activated.connect(self.activated_video_combobox)
         self.start_w.print_screen_btn.clicked.connect(self.print_scr)
         self.start_w.pushButton_12.clicked.connect(self.clear_chat)
+        self.start_w.comboBox_8.activated.connect(self.show_technique)
 
         sys.exit(app.exec_())
 
-    def del_data(self):
+    def show_technique(self):
+        pass
+
+    def del_tech(self):
         """Удаление записи с базы данных"""
         self.del_win = QtWidgets.QWidget()
         self.ui = del_win()
@@ -212,14 +296,32 @@ class LoginWin(Ui_Login):
             pass
 
         self.del_win.show()
-        self.ui.comboBox.activated.connect(lambda: add_data_to_combobox(self.ui))
-        self.ui.pushButton.clicked.connect(lambda: delete_data(self.ui, self.del_win))
+        self.ui.comboBox.activated.connect(lambda: add_garage_number_to_combobox(self.ui))
+        self.ui.pushButton.clicked.connect(lambda: delete_technique(self.ui, self.del_win))
+        self.ui.pushButton_2.clicked.connect(self.del_win.close)
+
+    def del_user(self):
+        """Удаление записи с базы данных"""
+        self.del_win = QtWidgets.QWidget()
+        self.ui = del_win()
+        self.ui.setupUi(self.del_win)
+        try:
+            with CONNECTION.cursor() as cursor:
+                cursor.execute("SELECT * FROM warehouse;")
+                data = cursor.fetchall()
+                for item in data:
+                    self.ui.comboBox.addItem(item[1])
+        except:
+            pass
+
+        self.del_win.show()
+        self.ui.comboBox.activated.connect(lambda: add_users_to_combobox(self.ui))
+        self.ui.pushButton.clicked.connect(lambda: delete_user(self.ui, self.del_win))
         self.ui.pushButton_2.clicked.connect(self.del_win.close)
 
     def clear_chat(self):
         """Очистка окна сообщения"""
         self.start_w.textEdit.clear()
-
 
     def print_scr(self):
         """Функция для сохранения скриншота с камеры"""
@@ -349,8 +451,21 @@ class LoginWin(Ui_Login):
         self.added_win = QtWidgets.QWidget()
         self.ui = add_pers_win()
         self.ui.setupUi(self.added_win)
+        try:
+            with CONNECTION.cursor() as cursor:
+                cursor.execute(f"SELECT * FROM warehouse;")
+                data = cursor.fetchall()
+                for item in data:
+                    self.ui.ComboBox.addItem(item[1])
+                cursor.execute(f"SELECT * FROM position;")
+                data_2 = cursor.fetchall()
+                for item in data_2:
+                    self.ui.ComboBox_2.addItem(item[1])
+        except:
+            pass
         self.added_win.show()
         self.ui.pushButton_2.clicked.connect(self.added_win.close)
+        self.ui.pushButton.clicked.connect(lambda: adding_users(self.ui, self.added_win))
 
     def add_work_win(self):
         """Функция отображения окна добавления работ"""
