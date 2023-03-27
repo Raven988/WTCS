@@ -188,7 +188,7 @@ def delete_technique(ui, win):
 
 
 def add_garage_number_to_combobox(ui):
-    """Добавление гаражных номеров в выподающий список"""
+    """Добавление гаражных номеров в выподающий список во вкладке техника"""
     warehouse = ui.comboBox.currentText()
     ui.comboBox_2.clear()
     try:
@@ -259,10 +259,16 @@ class LoginWin(Ui_Login):
         self.message_monitor = None
         self.video_monitor = None
         self.video_handler = None
+        self.model = QtGui.QStandardItemModel()
+        self.model.setHorizontalHeaderLabels(
+            ['Гаражный номер', 'Выполненные работы', 'Запчасти', 'Дата начала', 'Дата окончания'])
+        self.start_w.tableView.setModel(self.model)
+        self.start_w.comboBox_5.activated.connect(self.append_rapair_sheet)
         self.start_w.camera_box_2.activated.connect(self.activated_video_combobox)
         self.start_w.print_screen_btn.clicked.connect(self.print_scr)
         self.start_w.pushButton_12.clicked.connect(self.clear_chat)
         self.start_w.pushButton_2.clicked.connect(self.add_row)
+        self.start_w.comboBox_3.activated.connect(self.add_garage_number_to_combobox2)
 
         sys.exit(app.exec_())
 
@@ -376,6 +382,48 @@ class LoginWin(Ui_Login):
             layout.addWidget(btn)
             dlg.setLayout(layout)
             dlg.exec_()
+
+    def add_garage_number_to_combobox2(self):
+        """Добавление гаражных номеров в выподающий список во вкладке ремонты"""
+        warehouse = self.start_w.comboBox_3.currentText()
+        self.start_w.comboBox_5.clear()
+        try:
+            with CONNECTION.cursor() as cursor:
+                cursor.execute(
+                    f"SELECT garage_number FROM (SELECT * FROM warehouse JOIN technique "
+                    f"ON warehouse.id = technique.warehouse_id) as w "
+                    f"WHERE name = '{warehouse}';")
+                data = cursor.fetchall()
+                for item in data:
+                    self.start_w.comboBox_5.addItem(str(item[0]))
+        except:
+            pass
+
+    def append_rapair_sheet(self):
+        """Добавление выполненных ремонтных работ во вкладку ремонты"""
+        try:
+            self.model.clear()
+            number = self.start_w.comboBox_5.currentText()
+            with CONNECTION.cursor() as cursor:
+                cursor.execute(f"SELECT technique.garage_number, work.work_title, "
+                               f"repair_part.part_name, repair_sheet.repair_start_date, "
+                               f"repair_sheet.repair_end_date FROM repair_sheet "
+                               f"JOIN sheet_part ON sheet_part.part_id = repair_sheet.id "
+                               f"JOIN repair_part ON sheet_part.part_id = repair_part.id "
+                               f"JOIN sheet_work ON sheet_work.work_id = repair_sheet.id "
+                               f"JOIN work ON sheet_work.work_id = work.id "
+                               f"JOIN technique ON technique.id = repair_sheet.technique_id;")
+                data = cursor.fetchall()
+                for list_item in data:
+                    row_item = []
+                    for items in list_item:
+                        if list_item[0] == int(number):
+                            item = QtGui.QStandardItem(str(items))
+                            row_item.append(item)
+                    if len(row_item) > 0:
+                        self.model.appendRow(row_item)
+        except Exception as ex:
+            print(ex)
 
     def add_row(self):
         """Добавление строки во вкладке задачи"""
@@ -532,9 +580,12 @@ class LoginWin(Ui_Login):
 
 
 if __name__ == "__main__":
-
+    host = input('Введите адрес базы данных:  ')
+    user = input('Введите имя пользователя базы данных:  ')
+    password = input('Введите пароль базы данных:  ')
+    port = input('Введите порт базы данных:  ')
+    database = input('Введите название базы данных:  ')
     try:
-        from log_postgres import host, user, password, port, database
         CONNECTION = psycopg2.connect(
             host=host,
             user=user,
@@ -545,6 +596,6 @@ if __name__ == "__main__":
         CONNECTION.autocommit = True
     except:
         print('Подключение к базе данных отсутсвует')
-    SERVER_IP = '192.168.194.139'
+    SERVER_IP = input('Введите адрес сервера:  ')
     LoginWin()
 

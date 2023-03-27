@@ -302,6 +302,7 @@ class Ui_MainWindow(object):
         self.horizontalLayout_10.addWidget(self.comboBox_5)
         self.verticalLayout_8.addLayout(self.horizontalLayout_10)
         self.tableView = QtWidgets.QTableView(self.tab_5)
+        self.tableView.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
         self.tableView.setObjectName("tableView")
         self.verticalLayout_8.addWidget(self.tableView)
         self.frame_6 = QtWidgets.QFrame(self.tab_5)
