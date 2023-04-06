@@ -41,7 +41,7 @@ class MessageMonitor(QtCore.QThread):
 
 class VideoHandler(QtCore.QThread):
     """Класс реализован потоком для отслеживания перенаправленных
-    сервером видеопотоков и отоброжения"""
+    сервером видео потоков и отображения"""
     mysignal = QtCore.pyqtSignal(QtGui.QImage)
 
     def __init__(self, parent=None):
@@ -63,13 +63,14 @@ class VideoHandler(QtCore.QThread):
                                                  flipped_image.shape[0], QtGui.QImage.Format_RGB888)
                 pic = conv_to_qt_format.scaled(640, 480, QtCore.Qt.KeepAspectRatio)
                 self.mysignal.emit(pic)
-        except:
-            print('Ошибка с перенапровлением видеопотока')
+        except Exception as ex:
+            print(ex)
+            print('Ошибка с перенаправлением видео потока')
 
 
 class VideoMonitor(QtCore.QThread):
-    """Класс реализован потоком для оброботки сигнала с веб-камеры и его отоброжения,
-    так-же для отправки видеопотока на сервер для последующего перенапровления клиентам"""
+    """Класс реализован потоком для обработки сигнала с веб-камеры и его отображения,
+    так-же для отправки видео потока на сервер для последующего перенаправления клиентам"""
     mysignal = QtCore.pyqtSignal(QtGui.QImage)
 
     def __init__(self, cam_index, parent=None):
@@ -97,14 +98,15 @@ class VideoMonitor(QtCore.QThread):
                     string_data = data.tobytes()
                     self.vid_client.sendto(string_data, (SERVER_IP, VIDEO_PORT))
 
-            except:
-                print('Ошибка оброботки сигнала с веб-камеры')
+            except Exception as ex:
+                print(ex)
+                print('Ошибка обработки сигнала с веб-камеры')
                 self.vid_client.close()
                 self.vid.release()
 
 
 def adding_technique(ui, win):
-    """Функия добавления техники в базу данных"""
+    """Функция добавления техники в базу данных"""
     model = ui.LineEdit.text()
     serial_number = ui.LineEdit_2.text()
     registration_plate = ui.LineEdit_4.text()
@@ -121,7 +123,8 @@ def adding_technique(ui, win):
                 f"'{comments}', {warehouse_id + 1});"
             )
             win.close()
-    except:
+    except Exception as ex:
+        print(ex)
         dlg = QtWidgets.QDialog()
         dlg.setWindowTitle("Ошибка")
         dlg.setFixedSize(210, 70)
@@ -137,14 +140,14 @@ def adding_technique(ui, win):
 
 
 def adding_users(ui, win):
-    """Функия добавления пользователя в базу данных"""
+    """Функция добавления пользователя в базу данных"""
     first_name = ui.LineEdit.text()
     last_name = ui.LineEdit_2.text()
     fathers_name = ui.LineEdit_3.text()
     warehouse_id = ui.ComboBox.currentIndex()
     position_id = ui.ComboBox_2.currentIndex()
     address_of_registration = ui.LineEdit_7.text()
-    address_of_resdence = ui.LineEdit_8.text()
+    address_of_residence = ui.LineEdit_8.text()
     phone_number = ui.LineEdit_4.text()
     comments = ui.LineEdit_6.text()
     employment_data = ui.DateEdit.text()
@@ -154,14 +157,15 @@ def adding_users(ui, win):
         with CONNECTION.cursor() as cursor:
             cursor.execute(
                 f"INSERT INTO users(first_name, last_name, fathers_name, position_id, "
-                f"phone_number, address_of_registration, address_of_resdence, employment_data,"
+                f"phone_number, address_of_registration, address_of_residence, employment_data,"
                 f"comments, login, password, warehouse_id) VALUES ('{first_name}',"
                 f"'{last_name}', '{fathers_name}', {position_id + 1}, {phone_number},"
-                f"'{address_of_registration}', '{address_of_resdence}', '{employment_data}', "
+                f"'{address_of_registration}', '{address_of_residence}', '{employment_data}', "
                 f"'{comments}', '{login}', '{password}', {warehouse_id + 1});"
             )
             win.close()
-    except:
+    except Exception as ex:
+        print(ex)
         dlg = QtWidgets.QDialog()
         dlg.setWindowTitle("Ошибка")
         dlg.setFixedSize(210, 70)
@@ -183,12 +187,12 @@ def delete_technique(ui, win):
         with CONNECTION.cursor() as cursor:
             cursor.execute(f"DELETE FROM technique WHERE garage_number = {selcted_data};")
             win.close()
-    except:
-        pass
+    except Exception as ex:
+        print(ex)
 
 
 def add_garage_number_to_combobox(ui):
-    """Добавление гаражных номеров в выподающий список во вкладке техника"""
+    """Добавление гаражных номеров в выпадающий список во вкладке техника"""
     warehouse = ui.comboBox.currentText()
     ui.comboBox_2.clear()
     try:
@@ -199,12 +203,12 @@ def add_garage_number_to_combobox(ui):
             data = cursor.fetchall()
             for item in data:
                 ui.comboBox_2.addItem(str(item[0]))
-    except:
-        pass
+    except Exception as ex:
+        print(ex)
 
 
 def add_users_to_combobox(ui):
-    """Добавление пользователей в выподающий список"""
+    """Добавление пользователей в выпадающий список"""
     warehouse = ui.comboBox.currentText()
     ui.comboBox_2.clear()
     try:
@@ -215,8 +219,8 @@ def add_users_to_combobox(ui):
             data = cursor.fetchall()
             for item in data:
                 ui.comboBox_2.addItem(f"{item[0]} {item[1]} {item[2]}")
-    except:
-        pass
+    except Exception as ex:
+        print(ex)
 
 
 def delete_user(ui, win):
@@ -229,12 +233,12 @@ def delete_user(ui, win):
                            f"AND last_name = '{split_data[1]}' "
                            f"AND fathers_name = '{split_data[2]}');")
             win.close()
-    except:
-        pass
+    except Exception as ex:
+        print(ex)
 
 
 class LoginWin(Ui_Login):
-    """Запуск окна входа в приложения с последующим отоброжение главного окна"""
+    """Запуск окна входа в приложения с последующим отображение главного окна"""
     def __init__(self):
         """Инициализация"""
         app = QtWidgets.QApplication(sys.argv)
@@ -273,8 +277,8 @@ class LoginWin(Ui_Login):
         sys.exit(app.exec_())
 
     def push_btn(self):
-        """Функция для отрисобки главного окна.
-        Создание потоков реализована в данной функие"""
+        """Функция для отрисовки главного окна.
+        Создание потоков реализована в данной функции"""
         try:
             if self.ui.lineEdit.text() in LOGIN_PSWRD and \
                     LOGIN_PSWRD[self.ui.lineEdit.text()] == self.ui.lineEdit_2.text():
@@ -384,7 +388,7 @@ class LoginWin(Ui_Login):
             dlg.exec_()
 
     def add_garage_number_to_combobox2(self):
-        """Добавление гаражных номеров в выподающий список во вкладке ремонты"""
+        """Добавление гаражных номеров в выпадающий список во вкладке ремонты"""
         warehouse = self.start_w.comboBox_3.currentText()
         self.start_w.comboBox_5.clear()
         try:
@@ -396,8 +400,8 @@ class LoginWin(Ui_Login):
                 data = cursor.fetchall()
                 for item in data:
                     self.start_w.comboBox_5.addItem(str(item[0]))
-        except:
-            pass
+        except Exception as ex:
+            print(ex)
 
     def append_rapair_sheet(self):
         """Добавление выполненных ремонтных работ во вкладку ремонты"""
@@ -441,8 +445,8 @@ class LoginWin(Ui_Login):
                 data = cursor.fetchall()
                 for item in data:
                     self.ui.comboBox.addItem(item[1])
-        except:
-            pass
+        except Exception as ex:
+            print(ex)
 
         self.del_win.show()
         self.ui.comboBox.activated.connect(lambda: add_garage_number_to_combobox(self.ui))
@@ -460,8 +464,8 @@ class LoginWin(Ui_Login):
                 data = cursor.fetchall()
                 for item in data:
                     self.ui.comboBox.addItem(item[1])
-        except:
-            pass
+        except Exception as ex:
+            print(ex)
 
         self.del_win.show()
         self.ui.comboBox.activated.connect(lambda: add_users_to_combobox(self.ui))
@@ -525,7 +529,7 @@ class LoginWin(Ui_Login):
             self.tcp_client.send(send_msg.encode('utf-8'))
 
     def add_tec_win(self):
-        """Функция отображения окна добовления техникик"""
+        """Функция отображения окна добавления техники"""
         self.added_win = QtWidgets.QWidget()
         self.ui = add_tec_win()
         self.ui.setupUi(self.added_win)
@@ -572,7 +576,7 @@ class LoginWin(Ui_Login):
         self.added_win.show()
 
     def add_parts_win(self):
-        """Функция отоброжения окна добавления запчастей"""
+        """Функция отображения окна добавления запчастей"""
         self.added_win = QtWidgets.QDialog()
         self.ui = add_work_part_win()
         self.ui.setupUi(self.added_win)
@@ -594,8 +598,9 @@ if __name__ == "__main__":
             database=database
         )
         CONNECTION.autocommit = True
-    except:
-        print('Подключение к базе данных отсутсвует')
+    except Exception as ex:
+        print(ex)
+        print('Подключение к базе данных отсутствует')
     SERVER_IP = input('Введите адрес сервера:  ')
     LoginWin()
 

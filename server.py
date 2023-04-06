@@ -57,14 +57,14 @@ class Server:
                 break
 
     def video_handler(self):
-        """Функция для приема видеопотока и перенапровление его клиентам"""
+        """Функция для приема видео потока и перенаправление его клиентам"""
         while True:
             try:
                 data, address = self.video_server.recvfrom(65507)
                 for client in self.all_client:
                     self.video_server.sendto(data, (client.getpeername()[0], 9001))
             except:
-                print('Ошибка с перенапровлением видеосигнала')
+                print('Ошибка с перенаправлением видеосигнала')
 
 
 if __name__ == '__main__':
